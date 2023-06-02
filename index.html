@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Weather API</title>
+</head>
+<body>
+    <div class="continer">
+        <div class="header">
+            <h2 class="title">Current Weather</h2>
+            <div class="form-wrapper">
+                <form method="GET">
+                    <input type="text" name="city-name" id="city" placeholder="Enter city">
+                </form>
+                <button id="button" onclick="getWeather(event)">
+                    <img src="search_white.svg" alt="#">
+                </button>
+            </div>
+        </div>
+        
+        <div id="weather-wrapper">
+            <hr>
+            <div class="current-wether">
+                <div class="header">
+                    <h2 class="title" id="city-output"></h2>
+                    <div id="date"></div>
+                </div>
+                <div class="current-main">
+                    <div class="weather-type">
+                        <p id="weather-type"></p>
+                        <img alt="#" id="weather-img">
+                    </div>
+                    <div class="weather-temp"></div>
+                    <div class="weather-min-max-temp">
+                        <div class="min-temp">
+                            <p>Min temperature</p>
+                            <p id="min-temp-out"></p>
+                        </div>
+                        <div class="max-temp">
+                            <p>Max temperature</p>
+                            <p id="max-temp-out"></p>
+                        </div>
+                        <div class="wind">
+                            <p>Wind</p>
+                            <p id="wind-out"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="hourly-weather">
+                <h2 class="header">Hourly</h2>
+                <div class="hourly-weather-body">
+                    <div class="hourly-item">
+                        <div class="day-name"></div>
+                        <div class="forecast">Forecast</div>
+                        <div class="temp">Temperature &deg;C</div>
+                        <div class="wind">Wind (km/h)</div>
+                    </div>
+                    <div id="hourly-weather-add">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="error-block">
+            <h2>404</h2>
+            <h3>NOT FOUND</h3>
+            <h3>Plese enter a difrent city</h3>
+        </div>
+    </div>
+    <script>
+        let request, hourlyRequest;
+        if (window.XMLHttpRequest){
+            request = new XMLHttpRequest();
+            hourlyRequest = new XMLHttpRequest();
+        } else {
+            request = new ActiveXObject('Microsoft.XMLHTTP');
+            hourlyRequest = new ActiveXObject('Microsoft.XMLHTTP');
+        }
+
+        function getWeather(event){
+            const errorBlock = document.querySelector('#error-block');
+            const weatherBlock = document.querySelector("#weather-wrapper");
+            let city = document.forms[0].city.value;
+            let currentURL = `https://api.openweathermap.org/data/2.5/weather?q=${city}&lang=en&units=metric&appid=4a04b2c14f33d5c138b29ed7a2376f94`;
+            let hourlyURL = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&lang=en&units=metric&appid=4a04b2c14f33d5c138b29ed7a2376f94`;
+
+            request.open("GET", currentURL);
+            
+            request.onload = function(){
+                if(request.status === 404) {
+                    errorBlock.style.display = 'flex';
+                    weatherBlock.style.display = 'none';
+                    return;
+                }
+                if (request.status === 200){
+                    errorBlock.style.display = 'none';
+                    weatherBlock.style.display = 'flex';
+                    let currentResponse = JSON.parse(request.response);
+                    
+                    let curWeather = currentResponse.weather[0];
+                    let currTemp = currentResponse.main;
+                    let currWind = currentResponse.wind;
+                    let date = new Date(currentResponse.dt * 1000);
+                    
+                    document.querySelector('#city-output').innerText = currentResponse.name;
+                    document.querySelector('#date').innerText = date.toDateString();
+                    document.querySelector('#weather-type').innerText = curWeather.description;
+                    document.querySelector('#weather-img').src = `https://openweathermap.org/img/wn/${curWeather.icon}@2x.png`;
+                    document.querySelector('.weather-temp').innerHTML = `${Math.round(currTemp.temp)} &deg;C`;
+                    document.querySelector('#max-temp-out').innerHTML = `${Math.round(currTemp.temp_max)} &deg;C`;
+                    document.querySelector('#min-temp-out').innerHTML = `${Math.round(currTemp.temp_min)} &deg;C`;
+                    document.querySelector('#wind-out').innerHTML = `${Math.round(currWind.speed)} km/h`;
+                }
+                
+            }
+            hourlyRequest.open("GET", hourlyURL);
+            hourlyRequest.onload = function () {
+                if(hourlyRequest.status === 404) {
+                    errorBlock.style.display = 'flex';
+                    weatherBlock.style.display = 'none';
+                }
+                if (hourlyRequest.status === 200){
+                    errorBlock.style.display = 'none';
+                    weatherBlock.style.display = 'flex';
+
+                    let hourlyResponse = JSON.parse(hourlyRequest.response);
+                    console.log(hourlyResponse.list);
+                    let hourlyWeathwerBlock = document.querySelector('#hourly-weather-add');
+                    const todayDay = new Date(hourlyResponse.list[0].dt*1000);
+                    document.querySelector('.day-name').innerText = todayDay.toLocaleString("en-US", { weekday: "long" });
+                    hourlyResponse.list.forEach(function(elem){
+                        let date = new Date(elem.dt*1000);
+                        if(date.getDate() == todayDay.getDate()){
+                            let parentDiv = document.createElement('DIV');
+                            parentDiv.classList.add('weather-add-item');
+                            parentDiv.innerHTML = `<div class="hour">${date.getHours()} : 00</div>
+                                                   <div class="added-img">
+                                                        <img src="https://openweathermap.org/img/wn/${elem.weather[0].icon}@2x.png"/>
+                                                   </div>
+                                                   <div class="added-weather-type">${elem.weather[0].description}</div>
+                                                   <div class="added-temp">${Math.round(elem.main.temp)} &deg;C</div>
+                                                   <div class="added-wind">${Math.round(elem.wind.speed)} km/h</div>`;
+                            hourlyWeathwerBlock.appendChild(parentDiv);
+                        }
+                        console.log(date);
+                    });
+                }
+            }
+            request.send();
+            hourlyRequest.send();
+        }
+    </script>
+</body>
+</html>
